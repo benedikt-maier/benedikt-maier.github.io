@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Benedikt Maier – Publications</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --border: #1e1e2e;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --accent-cms: #ff6b35;
+    --accent-quantum: #7c3aed;
+    --accent-hep: #0ea5e9;
+    --accent-center: #f59e0b;
+    --glow-cms: rgba(255,107,53,0.15);
+    --glow-quantum: rgba(124,58,237,0.15);
+    --glow-hep: rgba(14,165,233,0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 3rem 4rem 2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  header h1 span {
+    color: var(--accent-center);
+  }
+
+  header p {
+    margin-top: 0.4rem;
+    color: var(--muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .legend {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    gap: 2rem;
+    padding: 1.2rem 4rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .legend-item:hover { color: var(--text); }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-dot.cms { background: var(--accent-cms); }
+  .legend-dot.quantum { background: var(--accent-quantum); }
+  .legend-dot.hep { background: var(--accent-hep); }
+
+  /* Mind map canvas */
+  #map-container {
+    position: relative;
+    z-index: 5;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  svg#mindmap {
+    width: 100%;
+    display: block;
+    cursor: grab;
+  }
+
+  svg#mindmap:active { cursor: grabbing; }
+
+  /* Tooltip */
+  #tooltip {
+    position: fixed;
+    z-index: 100;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1rem 1.2rem;
+    max-width: 380px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    font-size: 0.72rem;
+    line-height: 1.6;
+  }
+
+  #tooltip.visible { opacity: 1; }
+
+  #tooltip .tt-journal {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+
+  #tooltip .tt-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-bottom: 0.4rem;
+    color: var(--text);
+  }
+
+  #tooltip .tt-authors {
+    color: var(--muted);
+    font-size: 0.65rem;
+  }
+
+  #tooltip .tt-lead {
+    display: inline-block;
+    margin-top: 0.4rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.15rem 0.5rem;
+    border-radius: 2px;
+    background: rgba(245,158,11,0.15);
+    color: var(--accent-center);
+    border: 1px solid rgba(245,158,11,0.3);
+  }
+
+  /* Filter buttons */
+  .filters {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    gap: 0.5rem;
+    padding: 1rem 4rem;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.4rem 1rem;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .filter-btn:hover, .filter-btn.active {
+    color: var(--text);
+    border-color: var(--muted);
+    background: var(--surface);
+  }
+
+  .filter-btn.active.cms { border-color: var(--accent-cms); color: var(--accent-cms); }
+  .filter-btn.active.quantum { border-color: var(--accent-quantum); color: var(--accent-quantum); }
+  .filter-btn.active.hep { border-color: var(--accent-hep); color: var(--accent-hep); }
+
+  footer {
+    position: relative;
+    z-index: 10;
+    padding: 1.5rem 4rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 600px) {
+    header, .legend, .filters, footer { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Benedikt Maier <span>//</span> Publications</h1>
+  <p>Imperial College London &nbsp;·&nbsp; CMS @ CERN &nbsp;·&nbsp; DELight</p>
+</header>
+
+<div class="filters">
+  <button class="filter-btn active" data-filter="all">All</button>
+  <button class="filter-btn" data-filter="cms">CMS Experiment</button>
+  <button class="filter-btn" data-filter="hep">HEP / Phenomenology</button>
+  <button class="filter-btn" data-filter="quantum">Quantum &amp; Data Science</button>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot cms"></div>CMS Experiment</div>
+  <div class="legend-item"><div class="legend-dot hep"></div>HEP / Phenomenology</div>
+  <div class="legend-item"><div class="legend-dot quantum"></div>Quantum &amp; Data Science</div>
+  <div class="legend-item" style="margin-left:auto;color:var(--muted);font-size:0.65rem;">★ = lead author &nbsp;·&nbsp; hover nodes for details &nbsp;·&nbsp; drag to pan &nbsp;·&nbsp; scroll to zoom</div>
+</div>
+
+<div id="map-container">
+  <svg id="mindmap" xmlns="http://www.w3.org/2000/svg"></svg>
+</div>
+
+<div id="tooltip">
+  <div class="tt-journal" id="tt-journal"></div>
+  <div class="tt-title" id="tt-title"></div>
+  <div class="tt-authors" id="tt-authors"></div>
+  <span class="tt-lead" id="tt-lead" style="display:none">★ Lead author</span>
+</div>
+
+<footer>
+  ∗ indicates lead authorship or direct supervision of lead author &nbsp;·&nbsp; publications current as of April 2026
+</footer>
+
+<script>
+const publications = [
+  // CMS
+  { id:'c1', cat:'cms', lead:true,  year:2025, title:'Machine-learning techniques for model-independent searches in dijet final states', authors:'CMS Collaboration', journal:'arXiv:2512.20395', short:'ML Dijet Search' },
+  { id:'c2', cat:'cms', lead:true,  year:2025, title:'Model-agnostic search for dijet resonances with anomalous jet substructure', authors:'CMS Collaboration', journal:'Rep. Prog. Phys. 88 (2025) 067802', short:'Anomalous Jets' },
+  { id:'c3', cat:'cms', lead:true,  year:2025, title:'Physics of Dark Sectors in CMS', authors:'CMS Collaboration', journal:'Phys. Rept. 1115 (2025) 448', short:'Dark Sectors Review' },
+  { id:'c4', cat:'cms', lead:false, year:2024, title:'Search for soft unclustered energy patterns in proton-proton collisions at 13 TeV', authors:'CMS Collaboration', journal:'Phys. Rev. Lett. 133 (2024) 191902', short:'SUEP Search' },
+  { id:'c5', cat:'cms', lead:false, year:2024, title:'Measurement of simplified template cross sections of the Higgs boson in H→bb', authors:'CMS Collaboration', journal:'Phys. Rev. D 109 (2024) 092011', short:'Higgs→bb STXS' },
+  { id:'c6', cat:'cms', lead:true,  year:2021, title:'Search for new particles in events with energetic jets and large missing transverse momentum at 13 TeV', authors:'CMS Collaboration', journal:'JHEP 11 (2021) 153', short:'Mono-jet 13 TeV' },
+  { id:'c7', cat:'cms', lead:true,  year:2021, title:'Search for dark photons in Higgs boson production via vector boson fusion at 13 TeV', authors:'CMS Collaboration', journal:'JHEP 03 (2021) 011', short:'Dark Photon VBF' },
+  { id:'c8', cat:'cms', lead:false, year:2020, title:'Identification of heavy, hadronically decaying particles using machine-learning techniques', authors:'CMS Collaboration', journal:'JINST 15 (2020) 06', short:'ParticleNet' },
+  { id:'c9', cat:'cms', lead:true,  year:2020, title:'Search for dark matter particles produced in association with a Higgs boson at 13 TeV', authors:'CMS Collaboration', journal:'JHEP 03 (2020) 025', short:'DM + Higgs' },
+  { id:'c10',cat:'cms', lead:true,  year:2019, title:'Search for dark matter produced with a Higgs boson decaying to bottom quarks at 13 TeV', authors:'CMS Collaboration', journal:'EPJ C 79 (2019) 280', short:'DM + H→bb' },
+  { id:'c11',cat:'cms', lead:true,  year:2018, title:'Search for dark matter in events with energetic top quarks and missing transverse momentum at 13 TeV', authors:'CMS Collaboration', journal:'JHEP 06 (2018) 27', short:'Mono-top DM' },
+  { id:'c12',cat:'cms', lead:true,  year:2016, title:'Search for the associated production of a Higgs boson with a single top quark at 8 TeV', authors:'CMS Collaboration', journal:'JHEP 06 (2016) 177', short:'tH Production' },
+
+  // HEP / Phenomenology
+  { id:'h1', cat:'hep', lead:true,  year:2026, title:'Contrastive Metric Learning for Point Cloud Segmentation in Highly Granular Detectors', authors:'M. Marriott-Clarke et al.', journal:'arXiv:2603.23356', short:'Contrastive Metric' },
+  { id:'h2', cat:'hep', lead:false, year:2025, title:'Physics Briefing Book: Input for the 2026 Update of the European Strategy for Particle Physics', authors:'J. de Blas et al.', journal:'arXiv:2511.03883', short:'ESP Briefing Book' },
+  { id:'h3', cat:'hep', lead:false, year:2025, title:'Sub-microsecond Transformers for Jet Tagging on FPGAs', authors:'L. Laatu et al.', journal:'NeurIPS 2025 ML4PhysSci, arXiv:2510.24784', short:'FPGA Transformers' },
+  { id:'h4', cat:'hep', lead:false, year:2025, title:'Search for additional scalar bosons within the Inert Doublet Model at the FCC-ee', authors:'A. Bal et al.', journal:'EPJ C 85 (2025) 8', short:'Inert Doublet FCC' },
+  { id:'h5', cat:'hep', lead:false, year:2025, title:'t-channel dark matter at the LHC', authors:'C. Arina et al. (LHC DM WG)', journal:'EPJ C 85 (2025) 975', short:'t-channel DM' },
+  { id:'h6', cat:'hep', lead:true,  year:2025, title:'Resimulation-based Self-Supervised Learning for Pre-Training Physics Foundation Models', authors:'P. Harris et al.', journal:'Phys. Rev. D 111 (2025) 032010', short:'SSL Foundation Model' },
+  { id:'h7', cat:'hep', lead:true,  year:2024, title:'Distilling particle knowledge for fast reconstruction in high-energy physics', authors:'T. Brandes et al.', journal:'Mach. Learn.: Sci. Technol. 5 (2024) 025033', short:'Knowledge Distillation' },
+  { id:'h8', cat:'hep', lead:false, year:2024, title:'Autoencoders for Real-Time SUEP Detection', authors:'S. Chhibra et al.', journal:'EPJ Plus 139 (2024) 281', short:'SUEP Autoencoders' },
+  { id:'h9', cat:'hep', lead:false, year:2024, title:'Triggering Dark Showers with Conditional Dual Auto-Encoders', authors:'L. Anzalone et al.', journal:'Mach. Learn.: Sci. Technol. 5 (2024) 035064', short:'Dark Shower Trigger' },
+  { id:'h10',cat:'hep', lead:true,  year:2023, title:'Optimal transport for a global event description at high-intensity hadron colliders', authors:'L. Gouskos et al.', journal:'Phys. Rev. D 108 (2023) 096003', short:'Optimal Transport' },
+  { id:'h11',cat:'hep', lead:false, year:2022, title:'Theory, phenomenology, and experimental avenues for dark showers: a Snowmass 2021 report', authors:'G. Albouy et al.', journal:'EPJ C 82 (2022) 12', short:'Dark Showers Snowmass' },
+  { id:'h12',cat:'hep', lead:true,  year:2022, title:'Pile-Up Mitigation using Attention', authors:'B. Maier et al.', journal:'Mach. Learn.: Sci. Technol. 3 (2022) 025012', short:'Pileup + Attention' },
+  { id:'h13',cat:'hep', lead:false, year:2020, title:'Next-generation spin-0 dark matter models', authors:'T. Abe et al. (LHC DM WG)', journal:'Phys. Dark Univ. 27 (2020) 100351', short:'Spin-0 DM Models' },
+  { id:'h14',cat:'hep', lead:true,  year:2017, title:'tWH associated production at the LHC', authors:'F. Demartin et al.', journal:'EPJ C 77 (2017) 34', short:'tWH Production' },
+
+  // Quantum & Data Science
+  { id:'q1', cat:'quantum', lead:false, year:2025, title:'QINNs: Quantum-Informed Neural Networks', authors:'A. Bal et al.', journal:'arXiv:2510.17984', short:'QINNs' },
+  { id:'q2', cat:'quantum', lead:false, year:2025, title:'Continuous-variable photonic quantum extreme learning machines for fast collider-data selection', authors:'B. Maier et al.', journal:'EPJ Quantum Technology (accepted)', short:'Photonic QELMs' },
+  { id:'q3', cat:'quantum', lead:true,  year:2025, title:'1 Particle – 1 Qubit: Particle Physics Data Encoding for Quantum Machine Learning', authors:'A. Bal et al.', journal:'Phys. Rev. D 112 (2025) 076004', short:'1P–1Q Encoding' },
+  { id:'q4', cat:'quantum', lead:false, year:2025, title:'Signal partitioning in superfluid 4He: a Monte Carlo approach', authors:'F. Toschi et al.', journal:'Phys. Rev. D 111 (2025) 032013', short:'Superfluid He MC' },
+  { id:'q5', cat:'quantum', lead:false, year:2025, title:'A lightweight analysis farm for fundamental physics experiments', authors:'S. Brommer et al.', journal:'arXiv:2501.03007', short:'Analysis Farm' },
+  { id:'q6', cat:'quantum', lead:false, year:2024, title:'Magnetic microcalorimeter with SQUID readout for high-resolution X-ray spectroscopy', authors:'M. Krantz et al.', journal:"Appl. Phys. Lett. 124 (2024) 032601 [Editor's Suggestion]", short:'SQUID Microcalorimeter' },
+  { id:'q7', cat:'quantum', lead:false, year:2024, title:'Characterization of a high-resolution magnetic microcalorimeter towards DELight', authors:'F. Toschi et al.', journal:'Phys. Rev. D 109 (2024) 043035', short:'DELight Calorimeter' },
+  { id:'q8', cat:'quantum', lead:false, year:2021, title:'Towards a climatology of fog frequency in the Atacama Desert via machine learning', authors:'C. Böhm et al.', journal:'J. Appl. Meteorology and Climatology 60 (2021) 1149', short:'Atacama ML' },
+  { id:'q9', cat:'quantum', lead:true,  year:2021, title:'Dynamo – Handling Scientific Data Across Sites and Storage Media', authors:'Y. Iiyama et al.', journal:'Comput. Softw. Big Sci. 5 (2021) 11', short:'Dynamo Data Mgmt' },
+];
+
+const cats = {
+  cms:     { color: '#ff6b35', glow: 'rgba(255,107,53,0.2)',   label: 'CMS Experiment' },
+  hep:     { color: '#0ea5e9', glow: 'rgba(14,165,233,0.2)',   label: 'HEP / Pheno' },
+  quantum: { color: '#7c3aed', glow: 'rgba(124,58,237,0.2)',   label: 'Quantum & DS' },
+};
+
+const W = 1400, H = 860;
+const cx = W/2, cy = H/2;
+
+// Cluster centers
+const clusters = {
+  cms:     { angle: 220, r: 280 },
+  hep:     { angle:  20, r: 280 },
+  quantum: { angle: 130, r: 260 },
+};
+
+function toRad(deg) { return deg * Math.PI / 180; }
+
+function clusterCenter(cat) {
+  const c = clusters[cat];
+  return {
+    x: cx + c.r * Math.cos(toRad(c.angle)),
+    y: cy + c.r * Math.sin(toRad(c.angle)),
+  };
+}
+
+// Lay out nodes around each cluster center
+function layoutNodes(pubs) {
+  const bycat = {};
+  pubs.forEach(p => { (bycat[p.cat] = bycat[p.cat]||[]).push(p); });
+  const positions = {};
+  for (const [cat, items] of Object.entries(bycat)) {
+    const cc = clusterCenter(cat);
+    const n = items.length;
+    const r = 30 + n * 9;
+    items.forEach((p, i) => {
+      const a = (i / n) * 2 * Math.PI - Math.PI/2;
+      positions[p.id] = {
+        x: cc.x + r * Math.cos(a),
+        y: cc.y + r * Math.sin(a),
+        cat: p.cat,
+      };
+    });
+  }
+  return positions;
+}
+
+// SVG helpers
+function svgEl(tag, attrs={}) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+  return el;
+}
+
+const svg = document.getElementById('mindmap');
+const tooltip = document.getElementById('tooltip');
+
+let viewBox = { x: 0, y: 0, w: W, h: H };
+let dragging = false, dragStart = null, vbStart = null;
+
+function renderMap(filter='all') {
+  svg.innerHTML = '';
+  svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+  svg.setAttribute('height', Math.round(H * 0.82));
+
+  const filtered = filter === 'all' ? publications : publications.filter(p => p.cat === filter);
+  const positions = layoutNodes(publications); // layout all, hide filtered
+
+  const defs = svgEl('defs');
+
+  // Glow filters
+  for (const [cat, cfg] of Object.entries(cats)) {
+    const f = svgEl('filter', { id:`glow-${cat}`, x:'-50%', y:'-50%', width:'200%', height:'200%' });
+    const fe = svgEl('feGaussianBlur', { stdDeviation:'4', result:'blur' });
+    const fm = svgEl('feMerge');
+    const fn1 = svgEl('feMergeNode', { in:'blur' });
+    const fn2 = svgEl('feMergeNode', { in:'SourceGraphic' });
+    fm.appendChild(fn1); fm.appendChild(fn2);
+    f.appendChild(fe); f.appendChild(fm);
+    defs.appendChild(f);
+  }
+  svg.appendChild(defs);
+
+  const linesGroup = svgEl('g', { class:'lines' });
+  const nodesGroup = svgEl('g', { class:'nodes' });
+
+  // Center node
+  const centerG = svgEl('g');
+  const centerCircle = svgEl('circle', {
+    cx, cy, r:42,
+    fill:'#0a0a0f', stroke:'#f59e0b', 'stroke-width':'1.5',
+    filter:'url(#glow-cms)'
+  });
+  const centerText1 = svgEl('text', {
+    x:cx, y:cy-6, 'text-anchor':'middle',
+    'font-family':'Syne, sans-serif', 'font-weight':'800',
+    'font-size':'11', fill:'#f59e0b', 'letter-spacing':'0.05em'
+  });
+  centerText1.textContent = 'BENEDIKT';
+  const centerText2 = svgEl('text', {
+    x:cx, y:cy+8, 'text-anchor':'middle',
+    'font-family':'Syne, sans-serif', 'font-weight':'800',
+    'font-size':'11', fill:'#f59e0b', 'letter-spacing':'0.05em'
+  });
+  centerText2.textContent = 'MAIER';
+  const centerText3 = svgEl('text', {
+    x:cx, y:cy+20, 'text-anchor':'middle',
+    'font-family':'Space Mono, monospace',
+    'font-size':'7', fill:'rgba(245,158,11,0.6)', 'letter-spacing':'0.08em'
+  });
+  centerText3.textContent = 'PUBLICATIONS';
+  centerG.appendChild(centerCircle);
+  centerG.appendChild(centerText1);
+  centerG.appendChild(centerText2);
+  centerG.appendChild(centerText3);
+  nodesGroup.appendChild(centerG);
+
+  // Category hub nodes
+  for (const [cat, cfg] of Object.entries(cats)) {
+    if (filter !== 'all' && filter !== cat) continue;
+    const cc = clusterCenter(cat);
+
+    // Line from center to hub
+    const line = svgEl('line', {
+      x1:cx, y1:cy, x2:cc.x, y2:cc.y,
+      stroke: cfg.color, 'stroke-opacity':'0.25', 'stroke-width':'1',
+      'stroke-dasharray':'4 4'
+    });
+    linesGroup.appendChild(line);
+
+    const hubG = svgEl('g', { style:'cursor:default' });
+    const hubC = svgEl('circle', {
+      cx:cc.x, cy:cc.y, r:28,
+      fill:'#12121a', stroke:cfg.color, 'stroke-width':'1.5',
+      filter:`url(#glow-${cat})`
+    });
+
+    const words = cfg.label.split(' / ');
+    words.forEach((w, wi) => {
+      const t = svgEl('text', {
+        x:cc.x, y: cc.y - (words.length-1)*6 + wi*13,
+        'text-anchor':'middle',
+        'font-family':'Syne, sans-serif', 'font-weight':'700',
+        'font-size':'8', fill:cfg.color, 'letter-spacing':'0.04em'
+      });
+      t.textContent = w;
+      hubG.appendChild(t);
+    });
+
+    hubG.insertBefore(hubC, hubG.firstChild);
+    nodesGroup.appendChild(hubG);
+  }
+
+  // Publication nodes
+  filtered.forEach(pub => {
+    const pos = positions[pub.id];
+    if (!pos) return;
+    const cfg = cats[pub.cat];
+    const cc = clusterCenter(pub.cat);
+
+    // Line from hub to node
+    const line = svgEl('line', {
+      x1:cc.x, y1:cc.y, x2:pos.x, y2:pos.y,
+      stroke:cfg.color, 'stroke-opacity':'0.18', 'stroke-width':'0.8'
+    });
+    linesGroup.appendChild(line);
+
+    const g = svgEl('g', { style:'cursor:pointer', 'data-id':pub.id });
+    const r = pub.lead ? 13 : 9;
+
+    const circle = svgEl('circle', {
+      cx:pos.x, cy:pos.y, r,
+      fill: pub.lead ? cfg.color : '#12121a',
+      stroke: cfg.color,
+      'stroke-width': pub.lead ? '0' : '1',
+      opacity:'0.9'
+    });
+
+    const label = svgEl('text', {
+      x:pos.x, y:pos.y + r + 9,
+      'text-anchor':'middle',
+      'font-family':'Space Mono, monospace',
+      'font-size':'6.5',
+      fill:'rgba(232,232,240,0.7)',
+      'letter-spacing':'0.03em'
+    });
+    // Wrap short label
+    const words = pub.short.split(' ');
+    if (words.length <= 2) {
+      label.textContent = pub.short;
+    } else {
+      const mid = Math.ceil(words.length/2);
+      const line1 = svgEl('tspan', { x:pos.x, dy:'0' });
+      line1.textContent = words.slice(0,mid).join(' ');
+      const line2 = svgEl('tspan', { x:pos.x, dy:'8' });
+      line2.textContent = words.slice(mid).join(' ');
+      label.appendChild(line1);
+      label.appendChild(line2);
+    }
+
+    // Year badge for lead papers
+    if (pub.lead) {
+      const yr = svgEl('text', {
+        x:pos.x, y:pos.y+3.5,
+        'text-anchor':'middle',
+        'font-family':'Space Mono, monospace',
+        'font-size':'6', fill:'#0a0a0f', 'font-weight':'bold'
+      });
+      yr.textContent = String(pub.year).slice(2);
+      g.appendChild(yr);
+    }
+
+    g.appendChild(circle);
+    g.appendChild(label);
+
+    // Hover
+    g.addEventListener('mouseenter', (e) => {
+      circle.setAttribute('r', r + 3);
+      circle.setAttribute('filter', `url(#glow-${pub.cat})`);
+      showTooltip(e, pub, cfg);
+    });
+    g.addEventListener('mousemove', (e) => moveTooltip(e));
+    g.addEventListener('mouseleave', () => {
+      circle.setAttribute('r', r);
+      circle.removeAttribute('filter');
+      hideTooltip();
+    });
+
+    nodesGroup.appendChild(g);
+  });
+
+  svg.appendChild(linesGroup);
+  svg.appendChild(nodesGroup);
+}
+
+function showTooltip(e, pub, cfg) {
+  document.getElementById('tt-journal').textContent = pub.journal;
+  document.getElementById('tt-journal').style.color = cfg.color;
+  document.getElementById('tt-title').textContent = pub.title;
+  document.getElementById('tt-authors').textContent = pub.authors + ' · ' + pub.year;
+  const lead = document.getElementById('tt-lead');
+  lead.style.display = pub.lead ? 'inline-block' : 'none';
+  tooltip.classList.add('visible');
+  moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  const x = e.clientX + 16;
+  const y = e.clientY - 10;
+  const tw = 380;
+  tooltip.style.left = (x + tw > window.innerWidth ? x - tw - 30 : x) + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+
+// Pan & zoom
+svg.addEventListener('mousedown', e => {
+  dragging = true;
+  dragStart = { x: e.clientX, y: e.clientY };
+  vbStart = { ...viewBox };
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  const scale = viewBox.w / svg.clientWidth;
+  viewBox.x = vbStart.x - (e.clientX - dragStart.x) * scale;
+  viewBox.y = vbStart.y - (e.clientY - dragStart.y) * scale;
+  svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+});
+window.addEventListener('mouseup', () => { dragging = false; });
+svg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 1.1 : 0.9;
+  const rect = svg.getBoundingClientRect();
+  const mx = (e.clientX - rect.left) / rect.width * viewBox.w + viewBox.x;
+  const my = (e.clientY - rect.top) / rect.height * viewBox.h + viewBox.y;
+  viewBox.w *= factor; viewBox.h *= factor;
+  viewBox.x = mx - (mx - viewBox.x) * factor;
+  viewBox.y = my - (my - viewBox.y) * factor;
+  svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+}, { passive: false });
+
+// Filter buttons
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => {
+      b.classList.remove('active','cms','hep','quantum');
+    });
+    const f = btn.dataset.filter;
+    btn.classList.add('active');
+    if (f !== 'all') btn.classList.add(f);
+    renderMap(f);
+  });
+});
+
+renderMap('all');
+</script>
+</body>
+</html>
